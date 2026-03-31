@@ -1,0 +1,4 @@
+spacy
+google.genai
+dotenv
+pytest
