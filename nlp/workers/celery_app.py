@@ -14,8 +14,8 @@ celery_app.conf.imports = (
     "nlp.workers.tasks.document_tasks",
 )
 celery_app.conf.beat_schedule = {
-    "poll-documents-every-10s": {
+    "poll-documents-every-100s": {
         "task": "nlp.workers.tasks.document_tasks.poll_documents",
-        "schedule": 10.0,
+        "schedule": 100.0,
     },
 }

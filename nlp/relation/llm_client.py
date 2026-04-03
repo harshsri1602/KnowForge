@@ -8,11 +8,13 @@ load_dotenv()
 
 # Initialize client
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-
-
+# print(models:= client.models.list())
+# for m in models:
+#     print(m.name)
+    
 def call_llm(prompt: str):
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents=prompt,
         config={
             "temperature": 0
@@ -20,7 +22,7 @@ def call_llm(prompt: str):
     )
 
     text = response.text.strip()
-
+    #print(text)
     # Try parsing JSON directly
     try:
         return json.loads(text)

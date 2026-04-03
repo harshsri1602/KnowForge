@@ -12,7 +12,7 @@ def poll_documents():
         SET status = 'processing'
         WHERE id IN (
             SELECT id FROM documents
-            WHERE status = 'pending'
+            WHERE status in ('pending', 'failed')
             ORDER BY created_at ASC
             LIMIT 5
             FOR UPDATE SKIP LOCKED
@@ -57,7 +57,7 @@ def process_document(self, doc_id: int):
             "metadata": metadata
         }
 
-        result = run_nlp_pipeline(record["content"])
+        result = run_nlp_pipeline(record)
 
         cur.execute("""
             UPDATE documents

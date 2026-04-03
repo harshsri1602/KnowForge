@@ -1,89 +1,78 @@
 import re
+from rapidfuzz import fuzz
 from nlp.entity.spacy_model import nlp
 
+TECH = {
+    "aws", "azure", "gcp", "lambda", "ec2", "s3",
+    "docker", "kubernetes", "terraform", "ansible",
+    "kafka", "rabbitmq",
+    "redis", "postgres", "mongodb", "mysql", "dynamodb",
+    "airflow", "spark", "hadoop",
+    "django", "flask", "fastapi", "express", "spring",
+    "react", "nextjs", "vue", "angular",
+    "graphql", "rest", "grpc",
+    "git", "github", "gitlab",
+    "oauth", "iam", "jwt"
+}
 
-def label_entity(text: str) -> str:
-    """
-    Assign meaningful labels to entities
-    """
-    text_lower = text.lower()
+def is_tech_fuzzy(text):
+    for tech in TECH:
+        if fuzz.partial_ratio(text.lower(), tech) > 85:
+            return True
+    return False
 
-    # 👤 Person names (simple heuristic)
-    if text.istitle() and len(text.split()) == 1:
-        return "PERSON"
 
-    # ⚙️ Services
-    if "service" in text_lower:
-        return "SERVICE"
+def classify_entity(text: str):
+    t = text.lower()
 
-    # 🔗 APIs
-    if "api" in text_lower:
+    if any(k == t or k in t for k in TECH):
+        return "TECH"
+
+    if is_tech_fuzzy(t):
+        return "TECH"
+
+    if "api" in t:
         return "API"
 
-    # 🧱 Systems
-    if "system" in text_lower:
-        return "SYSTEM"
+    if any(k in t for k in ["service", "system", "pipeline"]):
+        return "SERVICE"
+
+    if re.match(r"^[A-Z][a-z]+$", text):
+        return "PERSON"
 
     return "UNKNOWN"
 
 
 def extract_entities(text: str):
-    """
-    Extract entities using:
-    1. spaCy (baseline NLP)
-    2. Rule-based heuristics (domain-specific)
-    3. Custom labeling (PERSON, SERVICE, API, etc.)
-    """
-
     entities = []
-
-    # 🔹 1. spaCy extraction
     doc = nlp(text)
+
     for ent in doc.ents:
+        label = classify_entity(ent.text)
+
         entities.append({
             "text": ent.text.strip(),
-            "label": label_entity(ent.text.strip())
+            "label": label
         })
 
-    # 🔹 2. Rule-based extraction
-
     patterns = [
-        r"\b[A-Z][a-z]+\b",                 # Rahul, Ankit
-        r"\b[A-Z][a-zA-Z]+\sservice\b",     # Lambda service
-        r"\bAPI\s?[A-Z]\b",                 # API X
-        r"\bService\s[A-Z]\b"               # Service A
+        (r"\bService\s[A-Z]\b", "SERVICE"),
+        (r"\bAPI\s?[A-Z]\b", "API"),
+        (r"\b[A-Z][a-zA-Z]+\sservice\b", "SERVICE"),
     ]
 
-    for pattern in patterns:
+    for pattern, label in patterns:
         matches = re.findall(pattern, text)
         for match in matches:
-            cleaned = match.strip()
             entities.append({
-                "text": cleaned,
-                "label": label_entity(cleaned)
+                "text": match.strip(),
+                "label": label
             })
 
-    # 🔹 3. Fallback: Capitalized words
-    words = text.split()
-    for word in words:
-        if word.istitle() and len(word) > 2:
-            cleaned = word.strip()
-            entities.append({
-                "text": cleaned,
-                "label": label_entity(cleaned)
-            })
-
-    # 🔹 4. Deduplicate (prefer better labels)
     unique = {}
-
     for e in entities:
-        key = e["text"].lower()
-
-        if key in unique:
-            # prefer more specific label over UNKNOWN
-            if unique[key]["label"] == "UNKNOWN" and e["label"] != "UNKNOWN":
-                unique[key] = e
-        else:
+        key = e["text"]
+        if key not in unique or unique[key]["label"] == "UNKNOWN":
             unique[key] = e
 
     return list(unique.values())

@@ -24,3 +24,14 @@ def clean_entities(entities):
             cleaned[normalized] = e
 
     return list(cleaned.values())
+
+def ensure_entities_from_relationships(entities, relationships):
+    entity_names = {e["text"] for e in entities}
+
+    for src, _, tgt in relationships:
+        if src not in entity_names:
+            entities.append({"text": src, "label": "UNKNOWN"})
+        if tgt not in entity_names:
+            entities.append({"text": tgt, "label": "UNKNOWN"})
+
+    return entities
