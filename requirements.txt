@@ -1,0 +1,8 @@
+spacy
+google.genai
+dotenv
+pytest
+celery
+celery[redis]
+psycopg2
+rapidfuzz
